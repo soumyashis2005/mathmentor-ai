@@ -1,9 +1,13 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+
 require("dotenv").config();
 
+// ========================================
 // Routes
+// ========================================
+
 const aiRoutes = require("./routes/aiRoutes");
 const questionRoutes = require("./routes/questionRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -16,12 +20,7 @@ const app = express();
 
 app.use(cors());
 
-const cors = require("cors");
-
-app.use(cors());
-
 app.use(express.json());
-
 app.use(express.urlencoded({ extended: true }));
 
 // ========================================
@@ -29,9 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 // ========================================
 
 app.use("/api/ai", aiRoutes);
-
 app.use("/api/questions", questionRoutes);
-
 app.use("/api/auth", authRoutes);
 
 // ========================================
@@ -62,7 +59,6 @@ const startServer = async () => {
     });
   } catch (error) {
     console.error("MongoDB connection failed:", error.message);
-
     process.exit(1);
   }
 };
