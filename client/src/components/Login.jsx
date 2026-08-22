@@ -23,7 +23,7 @@ function Login({ onLogin, onSwitchToRegister }) {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/login",
+        `${import.meta.env.VITE_API_URL}/api/auth/login`,
         {
           email: email.trim(),
           password,
