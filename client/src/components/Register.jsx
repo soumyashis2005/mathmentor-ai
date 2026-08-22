@@ -9,6 +9,10 @@ function Register({ onRegister, onSwitchToLogin }) {
 
   const [loading, setLoading] = useState(false);
 
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [error, setError] = useState("");
 
   const handleSubmit = async (event) => {
@@ -135,15 +139,25 @@ function Register({ onRegister, onSwitchToLogin }) {
           <div className="form-group">
             <label htmlFor="register-password">Password</label>
 
-            <input
-              id="register-password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Minimum 6 characters"
-              autoComplete="new-password"
-              disabled={loading}
-            />
+            <div className="password-input-wrapper">
+              <input
+                id="register-password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Minimum 6 characters"
+                autoComplete="new-password"
+                disabled={loading}
+              />
+
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
 
           {/* Confirm Password */}
@@ -151,15 +165,25 @@ function Register({ onRegister, onSwitchToLogin }) {
           <div className="form-group">
             <label htmlFor="confirm-password">Confirm Password</label>
 
-            <input
-              id="confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              placeholder="Re-enter your password"
-              autoComplete="new-password"
-              disabled={loading}
-            />
+            <div className="password-input-wrapper">
+              <input
+                id="confirm-password"
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="Re-enter your password"
+                autoComplete="new-password"
+                disabled={loading}
+              />
+
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
 
           {/* Submit */}

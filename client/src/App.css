@@ -3506,6 +3506,50 @@ textarea:focus {
   direction: ltr;
 }
 
+
+/* ==================================================
+   Password Input
+   ================================================== */
+
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 45px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  border: none;
+  background: transparent;
+
+  color: var(--text-muted);
+
+  cursor: pointer;
+
+  font-size: 18px;
+
+  padding: 4px;
+  margin: 0;
+
+  line-height: 1;
+
+  box-shadow: none;
+}
+
+.password-toggle:hover {
+  color: var(--text-primary);
+  background: transparent;
+}
+
+
 /* ==================================================
   KEYFRAMES
 ================================================== */
