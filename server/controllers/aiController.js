@@ -1,6 +1,7 @@
 const {
   generateMathSolution,
   generateTutorResponse,
+  extractMathQuestionFromImage,
 } = require("../services/aiService");
 
 const { verifyExpressions } = require("../services/mathVerification");
@@ -225,6 +226,197 @@ const solveQuestion = async (req, res) => {
 };
 
 // ========================================
+// Solve Image Question
+// ========================================
+
+const solveImage = async (req, res) => {
+  try {
+    // ========================================
+    // Validate Authentication
+    // ========================================
+
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required. Please login.",
+      });
+    }
+
+    // ========================================
+    // Validate Image
+    // ========================================
+
+    if (!req.body?.image) {
+      return res.status(400).json({
+        success: false,
+        message: "Image is required.",
+      });
+    }
+
+    const { image, mimeType } = req.body;
+
+    // Convert Base64 image to Buffer
+    const imageBuffer = Buffer.from(image, "base64");
+
+    // ========================================
+    // Extract Mathematics Question
+    // ========================================
+
+    const question = await extractMathQuestionFromImage(
+      imageBuffer,
+      mimeType || "image/jpeg",
+    );
+
+    // ========================================
+    // Generate Normal Math Solution
+    // ========================================
+
+    const solutionText = await generateMathSolution(question);
+
+    let solution;
+
+    try {
+      solution = JSON.parse(solutionText);
+    } catch (error) {
+      console.error("Failed to parse Gemini JSON:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "AI returned an invalid solution format.",
+      });
+    }
+
+    // ========================================
+    // Python Math Engine
+    // ========================================
+
+    let mathEngineResult = null;
+
+    if (
+      solution.mathEngine &&
+      solution.mathEngine.required === true &&
+      solution.mathEngine.expression &&
+      solution.mathEngine.operation
+    ) {
+      mathEngineResult = await solveWithPython({
+        expression: solution.mathEngine.expression,
+        operation: solution.mathEngine.operation,
+      });
+    }
+
+    // ========================================
+    // Python Symbolic Verification
+    // ========================================
+
+    let pythonVerification = null;
+
+    if (
+      solution.mathEngine &&
+      solution.mathEngine.verificationType &&
+      solution.mathEngine.verificationOriginal &&
+      solution.mathEngine.verificationAnswer
+    ) {
+      pythonVerification = await verifyWithPython({
+        type: solution.mathEngine.verificationType,
+        original: solution.mathEngine.verificationOriginal,
+        answer: solution.mathEngine.verificationAnswer,
+      });
+    }
+
+    // ========================================
+    // Final Verification
+    // ========================================
+
+    let verification = null;
+
+    if (pythonVerification && pythonVerification.success === true) {
+      verification = {
+        verified: pythonVerification.verified === true,
+
+        status:
+          pythonVerification.verified === true
+            ? "verified"
+            : pythonVerification.status || "incorrect",
+
+        type: "symbolic",
+
+        engine: "SymPy",
+
+        message:
+          pythonVerification.verified === true
+            ? "The solution was independently verified using SymPy."
+            : "The solution did not pass independent mathematical verification.",
+
+        details: pythonVerification,
+      };
+    } else if (
+      solution.verification &&
+      Array.isArray(solution.verification.expressions) &&
+      solution.verification.expressions.length > 0
+    ) {
+      verification = verifyExpressions(solution.verification.expressions);
+    } else {
+      verification = {
+        verified: false,
+        status: "unable_to_verify",
+        type: "unverified",
+        engine: null,
+        message:
+          "This solution could not be independently verified automatically.",
+        results: [],
+      };
+    }
+
+    // ========================================
+    // Save Question
+    // ========================================
+
+    const savedQuestion = await Question.create({
+      userId: req.user.userId,
+
+      questionText: question,
+
+      solution,
+
+      problemType: solution.problemType || "General Mathematics",
+
+      concept: solution.concept || "",
+
+      finalAnswer: solution.finalAnswer || "",
+
+      verification,
+    });
+
+    // ========================================
+    // Final Response
+    // ========================================
+
+    return res.status(200).json({
+      success: true,
+
+      question,
+
+      solution,
+
+      mathEngineResult,
+
+      pythonVerification,
+
+      verification,
+
+      savedQuestionId: savedQuestion._id,
+    });
+  } catch (error) {
+    console.error("Image Solve Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to solve image.",
+    });
+  }
+};
+
+// ========================================
 // AI Tutor
 // ========================================
 
@@ -360,6 +552,7 @@ const testPythonEngine = async (req, res) => {
 
 module.exports = {
   solveQuestion,
+  solveImage,
   tutorResponse,
   testPythonEngine,
 };

@@ -35,15 +35,14 @@ function App() {
   // ========================================
 
   const [question, setQuestion] = useState("");
-
   const [solution, setSolution] = useState(null);
-
   const [loading, setLoading] = useState(false);
-
   const [error, setError] = useState("");
 
-  const [copied, setCopied] = useState(false);
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
 
+  const [copied, setCopied] = useState(false);
   const [copiedLatex, setCopiedLatex] = useState(false);
 
   // ========================================
@@ -256,6 +255,100 @@ function App() {
 
   const toggleTheme = () => {
     setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"));
+  };
+
+  const solveImage = async () => {
+    if (!image) {
+      setError("Please upload a mathematics image first.");
+      return;
+    }
+
+    const token = getToken();
+
+    if (!token) {
+      setError("Please login before solving a problem.");
+
+      setAuthPage("login");
+
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSolution(null);
+
+    try {
+      // Convert image to Base64
+      const reader = new FileReader();
+
+      reader.onload = async () => {
+        try {
+          const base64Image = reader.result.split(",")[1];
+
+          const response = await axios.post(
+            `${API_URL}/api/ai/solve-image`,
+            {
+              image: base64Image,
+              mimeType: image.type,
+            },
+            getAuthConfig(),
+          );
+
+          if (!response.data?.success || !response.data?.solution) {
+            throw new Error(
+              response.data?.message || "Failed to solve the image.",
+            );
+          }
+
+          // Put extracted question into textarea
+          setQuestion(response.data.question || "");
+
+          // Show solution
+          setSolution(response.data.solution);
+
+          setImage(null);
+          setImagePreview("");
+
+          setTimeout(() => {
+            document.querySelector(".solution")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }, 150);
+        } catch (err) {
+          console.error("Image Solve Error:", err);
+
+          if (err.response?.status === 401) {
+            handleLogout();
+
+            setError("Your session has expired. Please login again.");
+
+            return;
+          }
+
+          setError(
+            err.response?.data?.message ||
+              err.message ||
+              "Something went wrong while solving the image.",
+          );
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      reader.onerror = () => {
+        setLoading(false);
+        setError("Failed to read the selected image.");
+      };
+
+      reader.readAsDataURL(image);
+    } catch (err) {
+      console.error("Image Error:", err);
+
+      setLoading(false);
+
+      setError("Failed to process the image.");
+    }
   };
 
   // ========================================
@@ -977,6 +1070,52 @@ function App() {
                   placeholder="Example: Solve x² - 5x + 6 = 0"
                   rows="6"
                 />
+
+                <div className="image-upload-section">
+                  <label htmlFor="math-image" className="image-upload-button">
+                    📷 Upload Math Image
+                  </label>
+
+                  <input
+                    id="math-image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.target.files[0];
+
+                      if (file) {
+                        setImage(file);
+                        setImagePreview(URL.createObjectURL(file));
+                      }
+                    }}
+                    hidden
+                  />
+                </div>
+
+                {imagePreview && (
+                  <div className="image-preview">
+                    <img src={imagePreview} alt="Math problem preview" />
+
+                    <button
+                      type="button"
+                      onClick={solveImage}
+                      disabled={loading}
+                    >
+                      {loading ? "Solving..." : "🧠 Solve Image"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImage(null);
+                        setImagePreview("");
+                      }}
+                      disabled={loading}
+                    >
+                      ✕ Remove Image
+                    </button>
+                  </div>
+                )}
 
                 <div className="keyboard-hint">
                   <span>Ctrl</span>

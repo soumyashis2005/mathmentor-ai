@@ -1099,6 +1099,103 @@ No extra text.
 };
 
 // ========================================
+// Extract Mathematics Question From Image
+// ========================================
+
+const extractMathQuestionFromImage = async (imageBuffer, mimeType) => {
+  const prompt = `
+You are MathMentor AI, an expert mathematics teacher.
+
+Look at the uploaded image and identify the mathematics problem shown in it.
+
+Your task:
+1. Read the mathematical question accurately.
+2. Preserve numbers, variables, symbols, powers, fractions, equations, matrices, and other mathematical notation.
+3. Do not solve the problem.
+4. Do not add information that is not visible in the image.
+5. If the image does not contain a clear mathematics problem, return an error.
+6. Return ONLY valid JSON.
+
+Required format:
+
+{
+  "success": true,
+  "question": "The extracted mathematics question"
+}
+
+If the image does not contain a clear mathematics question:
+
+{
+  "success": false,
+  "question": "",
+  "message": "No clear mathematics problem was found in the image."
+}
+
+Do not return Markdown.
+Do not use code fences.
+Do not include anything outside the JSON.
+`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3.1-flash-lite",
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: prompt,
+          },
+          {
+            inlineData: {
+              mimeType,
+              data: imageBuffer.toString("base64"),
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  const rawText = response.text?.trim();
+
+  if (!rawText) {
+    throw new Error("AI returned an empty image response.");
+  }
+
+  let cleanedText = rawText
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  const firstBrace = cleanedText.indexOf("{");
+  const lastBrace = cleanedText.lastIndexOf("}");
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error("AI returned an invalid image response.");
+  }
+
+  cleanedText = cleanedText.slice(firstBrace, lastBrace + 1);
+
+  let parsedData;
+
+  try {
+    parsedData = JSON.parse(cleanedText);
+  } catch (error) {
+    console.error("Image JSON parsing failed:", error.message);
+    throw new Error("AI returned malformed image data.");
+  }
+
+  if (!parsedData.success || !parsedData.question?.trim()) {
+    throw new Error(
+      parsedData.message || "No clear mathematics problem was found.",
+    );
+  }
+
+  return parsedData.question.trim();
+};
+
+// ========================================
 // AI Tutor Response
 // ========================================
 
@@ -1273,4 +1370,5 @@ Do not include anything outside the JSON.
 module.exports = {
   generateMathSolution,
   generateTutorResponse,
+  extractMathQuestionFromImage,
 };

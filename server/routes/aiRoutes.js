@@ -4,6 +4,7 @@ const {
   solveQuestion,
   tutorResponse,
   testPythonEngine,
+  solveImage,
 } = require("../controllers/aiController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -28,6 +29,12 @@ router.get("/test-route", (req, res) => {
 // ========================================
 
 router.post("/solve", authMiddleware, solveQuestion);
+
+// ========================================
+// Protected Image Solve Route
+// ========================================
+
+router.post("/solve-image", authMiddleware, solveImage);
 
 // ========================================
 // Protected AI Tutor Route
